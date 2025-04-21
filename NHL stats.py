@@ -69,9 +69,10 @@ with tab2:
             rows = []
             for team in conference['standings']['entries']:
                 team_name = team['team']['displayName']
-                wins = team['stats'][0]['value']
-                losses = team['stats'][1]['value']
-                points = team['stats'][3]['value']
+                stats = {s['name']: s['value'] for s in team['stats']}
+                wins = stats.get('wins', 0)
+                losses = stats.get('losses', 0)
+                points = stats.get('points', 0)
                 rows.append({
                     "Team": team_name,
                     "Wins": int(wins),
