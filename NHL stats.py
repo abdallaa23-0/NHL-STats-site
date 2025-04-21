@@ -43,6 +43,8 @@ with tab1:
         for game in games:
             teams = game['competitions'][0]['competitors']
             status = game['status']['type']['description']
+            clock = game['status'].get('clock')
+            period = game['status'].get('period')
 
             home = next(t for t in teams if t['homeAway'] == 'home')
             away = next(t for t in teams if t['homeAway'] == 'away')
@@ -60,7 +62,12 @@ with tab1:
             cols[2].image(home_logo, width=60)
 
             st.markdown(f"**{away_name}:** {away_score} | **{home_name}:** {home_score}")
-            st.caption(f"📍 {status}")
+
+            if status.lower() == "in progress" and clock and period:
+                st.caption(f"⏱ Period {period} - {clock} remaining")
+            else:
+                st.caption(f"📍 {status}")
+
             st.divider()
 
 # --- Tab 2: Standings ---
