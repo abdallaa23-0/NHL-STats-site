@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 from streamlit_autorefresh import st_autorefresh
 
@@ -10,9 +10,13 @@ st.title("NHL Dashboard - Live from ESPN")
 # Auto-refresh every 60 seconds for live timing
 st_autorefresh(interval=60 * 1000, key="refresh")
 
-# --- Helper: Get Today's Games from ESPN ---
-def get_today_games():
-    url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
+# Date selector
+selected_date = st.date_input("Select a date", datetime.today())
+selected_date_str = selected_date.strftime("%Y-%m-%d")
+
+# --- Helper: Get Games for a Given Date ---
+def get_games_for_date(date_str):
+    url = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard?dates={date_str}"
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -41,14 +45,14 @@ def get_play_by_play(game_id):
         return None
 
 # --- Navigation Tabs ---
-tab1, tab2 = st.tabs(["📅 Today's Games", "🏆 Standings"])
+tab1, tab2 = st.tabs(["📅 Games", "🏆 Standings"])
 
-# --- Tab 1: Today's Games ---
+# --- Tab 1: Games ---
 with tab1:
     st.caption(f"⏱ Last updated: {datetime.now().strftime('%I:%M:%S %p')}")
-    games = get_today_games()
+    games = get_games_for_date(selected_date_str)
     if not games:
-        st.info("No NHL Games Today")
+        st.info("No NHL Games on this day.")
     else:
         for game in games:
             game_id = game['id']
@@ -84,7 +88,6 @@ with tab1:
                 else:
                     st.caption(f"📍 {status}")
 
-                # Fetch and display play-by-play
                 summary = get_play_by_play(game_id)
                 if summary:
                     st.subheader("Goal Scorers")
@@ -123,11 +126,13 @@ with tab2:
                 team_name = team['team']['displayName']
                 wins = next((s['value'] for s in team['stats'] if s['name'] == 'wins'), 0)
                 losses = next((s['value'] for s in team['stats'] if s['name'] == 'losses'), 0)
+                otl = next((s['value'] for s in team['stats'] if s['name'] == 'otLosses'), 0)
                 points = next((s['value'] for s in team['stats'] if s['name'] == 'points'), 0)
                 rows.append({
                     "Team": team_name,
                     "Wins": int(wins),
                     "Losses": int(losses),
+                    "OTL": int(otl),
                     "Points": int(points)
                 })
 
