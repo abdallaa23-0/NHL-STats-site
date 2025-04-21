@@ -44,11 +44,14 @@ def get_play_by_play(game_id):
         return None
 
 def get_team_roster(team_id):
-    url = f"https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams/{team_id}/roster"
+    url = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/teams/{team_id}/roster"
     try:
         response = requests.get(url)
         response.raise_for_status()
-        return response.json().get("athletes", [])
+        data = response.json()
+        return data.get("athletes", [])  # Returns a list of athlete groupings (e.g., by position)
+    except:
+        return []
     except:
         return []
 
@@ -179,11 +182,17 @@ with tab3:
         roster = get_team_roster(team_id)
         if roster:
             for group in roster:
-                for player in group.get("items", []):
-                    position = player.get("position", {}).get("name", "Unknown Position")
-                    name = player.get("athlete", {}).get("displayName", "")
-                    photo = player.get("athlete", {}).get("headshot", {}).get("href", "")
-                    st.subheader(position)
+                position = group.get("position", "Unknown Position")
+                st.subheader(position)
+                players = group.get("items", [])
+                for player in players:
+                    athlete = player.get("athlete", {})
+                    name = athlete.get("displayName", "")
+                    photo = athlete.get("headshot", {}).get("href", "")
+                    col1, col2 = st.columns([1, 4])
+                    if photo:
+                        col1.image(photo, width=60)
+                    col2.markdown(f"**{name}**")
                     col1, col2 = st.columns([1, 4])
                     if photo:
                         col1.image(photo, width=60)
