@@ -72,13 +72,11 @@ with tab2:
                 wins = team['stats'][0]['value']
                 losses = team['stats'][1]['value']
                 points = team['stats'][3]['value']
-                streak = team['stats'][8]['displayValue']
                 rows.append({
                     "Team": team_name,
                     "Wins": int(wins),
                     "Losses": int(losses),
-                    "Points": int(points),
-                    "Streak": streak
+                    "Points": int(points)
                 })
 
             df = pd.DataFrame(rows)
