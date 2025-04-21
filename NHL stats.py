@@ -7,14 +7,14 @@ from streamlit_autorefresh import st_autorefresh
 st.set_page_config(page_title="NHL Scores Viewer", layout="centered")
 st.title("NHL Dashboard - Live from ESPN")
 
-# Auto-refresh every 60 seconds for live timing
 st_autorefresh(interval=60 * 1000, key="refresh")
 
-# Date selector (FIXED date format for ESPN API)
 selected_date = st.date_input("Select a date", datetime.today())
-selected_date_str = selected_date.strftime("%Y%m%d")  # ESPN expects YYYYMMDD
+selected_date_str = selected_date.strftime("%Y%m%d")
 
-# --- Helper: Get Games for a Given Date ---
+# Debug toggle
+show_debug = st.sidebar.checkbox("🔧 Show Raw API Response", value=False)
+
 def get_games_for_date(date_str):
     url = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard?dates={date_str}"
     try:
@@ -24,7 +24,6 @@ def get_games_for_date(date_str):
     except:
         return []
 
-# --- Helper: Get Standings from ESPN ---
 def get_standings():
     url = "https://site.web.api.espn.com/apis/v2/sports/hockey/nhl/standings"
     try:
@@ -34,7 +33,6 @@ def get_standings():
     except:
         return []
 
-# --- Helper: Get Play-by-Play ---
 def get_play_by_play(game_id):
     url = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event={game_id}"
     try:
@@ -44,10 +42,9 @@ def get_play_by_play(game_id):
     except:
         return None
 
-# --- Navigation Tabs ---
+# --- UI Tabs ---
 tab1, tab2 = st.tabs(["📅 Games", "🏆 Standings"])
 
-# --- Tab 1: Games ---
 with tab1:
     st.caption(f"⏱ Last updated: {datetime.now().strftime('%I:%M:%S %p')}")
     games = get_games_for_date(selected_date_str)
@@ -89,9 +86,13 @@ with tab1:
                     st.caption(f"📍 {status}")
 
                 summary = get_play_by_play(game_id)
+
+                if show_debug and summary:
+                    st.code(summary, language="json")
+
                 if summary:
                     st.subheader("Goal Scorers")
-                    goals = summary.get("scoringPlays", [])
+                    goals = summary.get("scoringPlays")
                     if goals:
                         for goal in goals:
                             scorer = ""
@@ -102,13 +103,13 @@ with tab1:
                                 elif player.get("playerType") == "Assist":
                                     assists.append(player.get("athlete", {}).get("displayName", ""))
                             time = goal.get("clock", "")
-                            period = goal.get("period", "")
-                            desc = f"{scorer} scored in Period {period} at {time}"
+                            per = goal.get("period", "")
+                            desc = f"{scorer} scored in Period {per} at {time}"
                             if assists:
                                 desc += f" (Assists: {', '.join(assists)})"
                             st.markdown(f"- {desc}")
                     else:
-                        st.caption("No goals recorded yet.")
+                        st.caption("⚠️ No goal data found in API.")
 
                     st.subheader("Play-by-Play")
                     plays_data = summary.get("plays")
@@ -119,11 +120,12 @@ with tab1:
                             text = play.get("text", "")
                             st.markdown(f"- {time} | {text}")
                     else:
-                        st.caption("No play-by-play data available.")
+                        st.caption("⚠️ No play-by-play data found in API.")
+                else:
+                    st.caption("❌ Could not fetch game summary.")
 
-            st.divider()
+                st.divider()
 
-# --- Tab 2: Standings ---
 with tab2:
     standings_data = get_standings()
     if not standings_data:
@@ -147,8 +149,4 @@ with tab2:
                 })
 
             df = pd.DataFrame(rows)
-            st.dataframe(
-                df,
-                use_container_width=True,
-                hide_index=True,
-            )
+            st.dataframe(df, use_container_width=True, hide_index=True)
