@@ -2,6 +2,8 @@ import streamlit as st
 import requests
 from datetime import datetime, timedelta
 import pandas as pd
+import os
+import json
 from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="NHL Scores Viewer", layout="centered")
@@ -14,6 +16,13 @@ selected_date_str = selected_date.strftime("%Y%m%d")
 
 # Debug toggle
 show_debug = st.sidebar.checkbox("🔧 Show Raw API Response", value=False)
+
+# Cache directory setup
+CACHE_DIR = "nhl_cache"
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+def cache_path(game_id):
+    return os.path.join(CACHE_DIR, f"{game_id}_summary.json")
 
 def get_games_for_date(date_str):
     url = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard?dates={date_str}"
@@ -34,11 +43,19 @@ def get_standings():
         return []
 
 def get_play_by_play(game_id):
+    cache_file = cache_path(game_id)
+    if os.path.exists(cache_file):
+        with open(cache_file, "r") as f:
+            return json.load(f)
+
     url = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event={game_id}"
     try:
         response = requests.get(url)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        with open(cache_file, "w") as f:
+            json.dump(data, f)
+        return data
     except:
         return None
 
@@ -109,7 +126,7 @@ with tab1:
                                 desc += f" (Assists: {', '.join(assists)})"
                             st.markdown(f"- {desc}")
                     else:
-                        st.caption("⚠️ No goal data found in API.")
+                        st.caption("⚠️ No goal data found in API or cache.")
 
                     st.subheader("Play-by-Play")
                     plays_data = summary.get("plays")
@@ -120,7 +137,7 @@ with tab1:
                             text = play.get("text", "")
                             st.markdown(f"- {time} | {text}")
                     else:
-                        st.caption("⚠️ No play-by-play data found in API.")
+                        st.caption("⚠️ No play-by-play data found in API or cache.")
                 else:
                     st.caption("❌ Could not fetch game summary.")
 
