@@ -30,6 +30,16 @@ def get_standings():
     except:
         return []
 
+# --- Helper: Get Play-by-Play ---
+def get_play_by_play(game_id):
+    url = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event={game_id}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json()
+    except:
+        return None
+
 # --- Navigation Tabs ---
 tab1, tab2 = st.tabs(["📅 Today's Games", "🏆 Standings"])
 
@@ -41,6 +51,7 @@ with tab1:
         st.info("No NHL Games Today")
     else:
         for game in games:
+            game_id = game['id']
             teams = game['competitions'][0]['competitors']
             status = game['status']['type']['description']
             clock = game['status'].get('clock')
@@ -56,24 +67,36 @@ with tab1:
             home_logo = home['team']['logo']
             away_logo = away['team']['logo']
 
-            cols = st.columns([1, 6, 1])
-            cols[0].image(away_logo, width=60)
-            cols[1].markdown(f"### {away_name} vs {home_name}")
-            cols[2].image(home_logo, width=60)
+            with st.expander(f"{away_name} {away_score} - {home_score} {home_name}"):
+                cols = st.columns([1, 6, 1])
+                cols[0].image(away_logo, width=60)
+                cols[1].markdown(f"### {away_name} vs {home_name}")
+                cols[2].image(home_logo, width=60)
 
-            st.markdown(f"**{away_name}:** {away_score} | **{home_name}:** {home_score}")
+                if status.lower() == "in progress" and clock and period:
+                    try:
+                        minutes = int(clock) // 60
+                        seconds = int(clock) % 60
+                        time_display = f"{minutes}:{seconds:02d}"
+                        st.caption(f"⏱ Period {period} - {time_display} remaining")
+                    except:
+                        st.caption(f"⏱ Period {period} - {clock} remaining")
+                else:
+                    st.caption(f"📍 {status}")
 
-            if status.lower() == "in progress" and clock and period:
-                # Convert clock from float seconds to MM:SS
-                try:
-                    minutes = int(clock) // 60
-                    seconds = int(clock) % 60
-                    time_display = f"{minutes}:{seconds:02d}"
-                    st.caption(f"⏱ Period {period} - {time_display} remaining")
-                except:
-                    st.caption(f"⏱ Period {period} - {clock} remaining")
-            else:
-                st.caption(f"📍 {status}")
+                # Fetch and display play-by-play
+                summary = get_play_by_play(game_id)
+                if summary:
+                    st.subheader("Goal Scorers")
+                    goals = [event for event in summary.get("plays", []) if event.get("type", {}).get("text") == "Goal"]
+                    for goal in goals:
+                        desc = goal.get("text", "")
+                        st.markdown(f"- {desc}")
+
+                    st.subheader("Play-by-Play")
+                    pbp = summary.get("plays", [])[:10]  # Show last 10 events
+                    for play in pbp:
+                        st.markdown(f"- {play.get('clock', {}).get('displayValue', '')} | {play.get('text', '')}")
 
             st.divider()
 
