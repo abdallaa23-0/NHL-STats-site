@@ -88,15 +88,17 @@ with tab1:
                 summary = get_play_by_play(game_id)
                 if summary:
                     st.subheader("Goal Scorers")
-                    goals = [event for event in summary.get("plays", []) if event.get("type", {}).get("text") == "Goal"]
+                    goals = summary.get("scoringPlays", [])
                     for goal in goals:
                         desc = goal.get("text", "")
                         st.markdown(f"- {desc}")
 
                     st.subheader("Play-by-Play")
-                    pbp = summary.get("plays", [])[:10]  # Show last 10 events
-                    for play in pbp:
-                        st.markdown(f"- {play.get('clock', {}).get('displayValue', '')} | {play.get('text', '')}")
+                    all_plays = summary.get("plays", {}).get("allPlays", [])
+                    for play in all_plays[-10:]:
+                        time = play.get("clock", {}).get("displayValue", "")
+                        text = play.get("text", "")
+                        st.markdown(f"- {time} | {text}")
 
             st.divider()
 
