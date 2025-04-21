@@ -2,9 +2,13 @@ import streamlit as st
 import requests
 from datetime import datetime
 import pandas as pd
+from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="NHL Scores Viewer", layout="centered")
 st.title("NHL Dashboard - Live from ESPN")
+
+# Auto-refresh every 60 seconds for live timing
+st_autorefresh(interval=60 * 1000, key="refresh")
 
 # --- Helper: Get Today's Games from ESPN ---
 def get_today_games():
@@ -31,6 +35,7 @@ tab1, tab2 = st.tabs(["📅 Today's Games", "🏆 Standings"])
 
 # --- Tab 1: Today's Games ---
 with tab1:
+    st.caption(f"⏱ Last updated: {datetime.now().strftime('%I:%M:%S %p')}")
     games = get_today_games()
     if not games:
         st.info("No NHL Games Today")
