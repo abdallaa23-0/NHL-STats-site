@@ -94,9 +94,19 @@ with tab1:
                     goals = summary.get("scoringPlays", [])
                     if goals:
                         for goal in goals:
-                            desc = goal.get("text", "")
-                            if desc:
-                                st.markdown(f"- {desc}")
+                            scorer = ""
+                            assists = []
+                            for player in goal.get("players", []):
+                                if player.get("playerType") == "Scorer":
+                                    scorer = player.get("athlete", {}).get("displayName", "")
+                                elif player.get("playerType") == "Assist":
+                                    assists.append(player.get("athlete", {}).get("displayName", ""))
+                            time = goal.get("clock", "")
+                            period = goal.get("period", "")
+                            desc = f"{scorer} scored in Period {period} at {time}"
+                            if assists:
+                                desc += f" (Assists: {', '.join(assists)})"
+                            st.markdown(f"- {desc}")
                     else:
                         st.caption("No goals recorded yet.")
 
