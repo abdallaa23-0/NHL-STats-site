@@ -179,11 +179,11 @@ with tab3:
         roster = get_team_roster(team_id)
         if roster:
             for group in roster:
-                for player in group.get("items", []):
-                    position = player.get("position", {}).get("name", "")
-                    name = player.get("athlete", {}).get("displayName", "")
-                    photo = player.get("athlete", {}).get("headshot", {}).get("href", "")
-                    st.subheader(position)
+                st.subheader(group.get("position", {}).get("abbreviation", "Position"))
+                players = group.get("items", [])
+                for player in players:
+                    name = player.get("fullName", "")
+                    photo = player.get("headshot", {}).get("href", "")
                     col1, col2 = st.columns([1, 4])
                     if photo:
                         col1.image(photo, width=60)
