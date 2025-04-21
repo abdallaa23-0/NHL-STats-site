@@ -52,8 +52,7 @@ def get_team_roster(team_id):
         return data.get("athletes", [])  # Returns a list of athlete groupings (e.g., by position)
     except:
         return []
-    except:
-        return []
+
 
 # --- UI Tabs ---
 tab1, tab2, tab3 = st.tabs(["📅 Games", "🏆 Standings", "📋 Team Rosters"])
