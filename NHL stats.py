@@ -1,7 +1,9 @@
 import streamlit as st
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
+import os
+import json
 from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(page_title="NHL Scores Viewer", layout="centered")
@@ -12,7 +14,6 @@ st_autorefresh(interval=60 * 1000, key="refresh")
 selected_date = st.date_input("Select a date", datetime.today())
 selected_date_str = selected_date.strftime("%Y%m%d")
 
-# Debug toggle
 show_debug = st.sidebar.checkbox("🔧 Show Raw API Response", value=False)
 
 def get_games_for_date(date_str):
@@ -42,8 +43,17 @@ def get_play_by_play(game_id):
     except:
         return None
 
+def get_team_roster(team_id):
+    url = f"https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/teams/{team_id}/roster"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.json().get("athletes", [])
+    except:
+        return []
+
 # --- UI Tabs ---
-tab1, tab2 = st.tabs(["📅 Games", "🏆 Standings"])
+tab1, tab2, tab3 = st.tabs(["📅 Games", "🏆 Standings", "📋 Team Rosters"])
 
 with tab1:
     st.caption(f"⏱ Last updated: {datetime.now().strftime('%I:%M:%S %p')}")
@@ -147,6 +157,22 @@ with tab2:
                     "OTL": int(otl),
                     "Points": int(points)
                 })
-
             df = pd.DataFrame(rows)
             st.dataframe(df, use_container_width=True, hide_index=True)
+
+with tab3:
+    team_id = st.text_input("Enter ESPN team ID (e.g., 10 for Toronto Maple Leafs):")
+    if team_id:
+        roster = get_team_roster(team_id)
+        if roster:
+            for group in roster:
+                st.subheader(group.get("position", ""))
+                for player in group.get("items", []):
+                    name = player.get("athlete", {}).get("displayName", "")
+                    photo = player.get("athlete", {}).get("headshot", {}).get("href", "")
+                    col1, col2 = st.columns([1, 4])
+                    if photo:
+                        col1.image(photo, width=60)
+                    col2.markdown(f"**{name}**")
+        else:
+            st.warning("No roster data found.")
