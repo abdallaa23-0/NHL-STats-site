@@ -51,12 +51,12 @@ with tab1:
 
             cols = st.columns([1, 6, 1])
             cols[0].image(away_logo, width=60)
-            cols[1].subheader(f"{away_name} vs {home_name}")
+            cols[1].markdown(f"### {away_name} vs {home_name}")
             cols[2].image(home_logo, width=60)
 
-            st.write(f"**{away_name}:** {away_score} | **{home_name}:** {home_score}")
+            st.markdown(f"**{away_name}:** {away_score} | **{home_name}:** {home_score}")
             st.caption(f"📍 {status}")
-            st.markdown("---")
+            st.divider()
 
 # --- Tab 2: Standings ---
 with tab2:
@@ -65,26 +65,25 @@ with tab2:
         st.warning("Could not load standings.")
     else:
         for conference in standings_data:
-            st.header(conference['name'])
+            st.subheader(conference['name'])
             rows = []
             for team in conference['standings']['entries']:
                 team_name = team['team']['displayName']
-                wins = team['stats'][10]['value']  # Actual total wins field
+                wins = team['stats'][0]['value']
                 losses = team['stats'][1]['value']
                 points = team['stats'][3]['value']
                 streak = team['stats'][8]['displayValue']
-                rows.append([team_name, wins, losses, points, streak])
+                rows.append({
+                    "Team": team_name,
+                    "Wins": int(wins),
+                    "Losses": int(losses),
+                    "Points": int(points),
+                    "Streak": streak
+                })
 
-            df = pd.DataFrame(rows, columns=["Team", "Wins", "Losses", "Points", "Streak"])
-            st.dataframe(df.style.set_properties(**{
-                'text-align': 'left',
-                'background-color': '#f9f9f9',
-                'border-color': '#ddd',
-                'border-style': 'solid',
-                'border-width': '1px'
-            }).set_table_styles([
-                {"selector": "th", "props": [
-                    ("font-weight", "bold"),
-                    ("background-color", "#f0f2f6")
-                ]}
-            ]), use_container_width=True)
+            df = pd.DataFrame(rows)
+            st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True,
+            )
