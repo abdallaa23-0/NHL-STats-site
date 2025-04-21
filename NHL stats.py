@@ -89,9 +89,13 @@ with tab1:
                 if summary:
                     st.subheader("Goal Scorers")
                     goals = summary.get("scoringPlays", [])
-                    for goal in goals:
-                        desc = goal.get("text", "")
-                        st.markdown(f"- {desc}")
+                    if goals:
+                        for goal in goals:
+                            desc = goal.get("text", "")
+                            if desc:
+                                st.markdown(f"- {desc}")
+                    else:
+                        st.caption("No goals recorded yet.")
 
                     st.subheader("Play-by-Play")
                     plays_data = summary.get("plays")
@@ -101,6 +105,8 @@ with tab1:
                             time = play.get("clock", {}).get("displayValue", "")
                             text = play.get("text", "")
                             st.markdown(f"- {time} | {text}")
+                    else:
+                        st.caption("No play-by-play data available.")
 
             st.divider()
 
