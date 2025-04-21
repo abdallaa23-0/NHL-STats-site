@@ -48,7 +48,7 @@ def get_play_by_play(game_id):
         with open(cache_file, "r") as f:
             return json.load(f)
 
-    url = f"https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event={game_id}"
+    url = f"https://statsapi.web.nhl.com/api/v1/game/{game_id}/feed/live"
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -109,45 +109,38 @@ with tab1:
 
                 if summary:
                     st.subheader("Goal Scorers")
-                    goals = summary.get("scoringPlays")
+                    goals = [play for play in summary.get("liveData", {}).get("plays", {}).get("allPlays", []) if play.get("result", {}).get("event") == "Goal"]
                     if goals:
                         for goal in goals:
-                            scorer_name = "Unknown"
-                            scorer_id = ""
-                            assists = []
-                            for player in goal.get("players", []):
-                                athlete = player.get("athlete", {})
-                                if player.get("playerType") == "Scorer":
-                                    scorer_name = athlete.get("displayName", "")
-                                    scorer_id = athlete.get("id", "")
-                                elif player.get("playerType") == "Assist":
-                                    assist_name = athlete.get("displayName", "")
-                                    assists.append(assist_name)
+                            period = goal.get("about", {}).get("period")
+                            time = goal.get("about", {}).get("periodTime")
+                            players = goal.get("players", [])
+                            scorer = next((p for p in players if p["playerType"] == "Scorer"), None)
+                            assists = [p for p in players if p["playerType"] == "Assist"]
 
-                            time = goal.get("clock", "")
-                            per = goal.get("period", "")
-
-                            if scorer_id:
-                                scorer_link = f"https://www.espn.com/nhl/player/_/id/{scorer_id}"
-                                scorer_display = f"[{scorer_name}]({scorer_link})"
+                            if scorer:
+                                name = scorer['player']['fullName']
+                                pid = scorer['player']['id']
+                                link = f"https://www.nhl.com/player/{pid}"
+                                desc = f"[{name}]({link}) scored in Period {period} at {time}"
                             else:
-                                scorer_display = scorer_name
+                                desc = f"Goal in Period {period} at {time}"
 
-                            desc = f"{scorer_display} scored in Period {per} at {time}"
                             if assists:
-                                desc += f" (Assists: {', '.join(assists)})"
+                                assist_names = [a['player']['fullName'] for a in assists]
+                                desc += f" (Assists: {', '.join(assist_names)})"
+
                             st.markdown(f"- {desc}")
                     else:
                         st.caption("⚠️ No goal data found in API or cache.")
 
                     st.subheader("Play-by-Play")
-                    plays_data = summary.get("plays")
-                    if plays_data and "allPlays" in plays_data:
-                        all_plays = plays_data["allPlays"]
+                    all_plays = summary.get("liveData", {}).get("plays", {}).get("allPlays", [])
+                    if all_plays:
                         for play in all_plays[-10:]:
-                            time = play.get("clock", {}).get("displayValue", "")
-                            text = play.get("text", "")
-                            st.markdown(f"- {time} | {text}")
+                            time = play.get("about", {}).get("periodTime")
+                            desc = play.get("result", {}).get("description")
+                            st.markdown(f"- {time} | {desc}")
                     else:
                         st.caption("⚠️ No play-by-play data found in API or cache.")
                 else:
