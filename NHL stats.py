@@ -64,7 +64,14 @@ with tab1:
             st.markdown(f"**{away_name}:** {away_score} | **{home_name}:** {home_score}")
 
             if status.lower() == "in progress" and clock and period:
-                st.caption(f"⏱ Period {period} - {clock} remaining")
+                # Convert clock from float seconds to MM:SS
+                try:
+                    minutes = int(clock) // 60
+                    seconds = int(clock) % 60
+                    time_display = f"{minutes}:{seconds:02d}"
+                    st.caption(f"⏱ Period {period} - {time_display} remaining")
+                except:
+                    st.caption(f"⏱ Period {period} - {clock} remaining")
             else:
                 st.caption(f"📍 {status}")
 
