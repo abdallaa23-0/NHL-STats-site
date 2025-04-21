@@ -10,9 +10,9 @@ st.title("NHL Dashboard - Live from ESPN")
 # Auto-refresh every 60 seconds for live timing
 st_autorefresh(interval=60 * 1000, key="refresh")
 
-# Date selector
+# Date selector (FIXED date format for ESPN API)
 selected_date = st.date_input("Select a date", datetime.today())
-selected_date_str = selected_date.strftime("%Y-%m-%d")
+selected_date_str = selected_date.strftime("%Y%m%d")  # ESPN expects YYYYMMDD
 
 # --- Helper: Get Games for a Given Date ---
 def get_games_for_date(date_str):
