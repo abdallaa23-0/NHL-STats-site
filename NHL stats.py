@@ -161,15 +161,29 @@ with tab2:
             st.dataframe(df, use_container_width=True, hide_index=True)
 
 with tab3:
-    team_id = st.text_input("Enter ESPN team ID (e.g., 10 for Toronto Maple Leafs):")
+    def get_all_teams():
+        url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/teams"
+        try:
+            res = requests.get(url)
+            res.raise_for_status()
+            data = res.json()
+            return {team['team']['displayName']: team['team']['id'] for team in data.get("sports", [])[0].get("leagues", [])[0].get("teams", [])}
+        except:
+            return {}
+
+    teams = get_all_teams()
+    team_name = st.selectbox("Select a team:", sorted(teams.keys()))
+    team_id = teams.get(team_name)
+
     if team_id:
         roster = get_team_roster(team_id)
         if roster:
             for group in roster:
-                st.subheader(group.get("position", ""))
                 for player in group.get("items", []):
+                    position = player.get("position", {}).get("name", "")
                     name = player.get("athlete", {}).get("displayName", "")
                     photo = player.get("athlete", {}).get("headshot", {}).get("href", "")
+                    st.subheader(position)
                     col1, col2 = st.columns([1, 4])
                     if photo:
                         col1.image(photo, width=60)
