@@ -69,7 +69,7 @@ with tab2:
             rows = []
             for team in conference['standings']['entries']:
                 team_name = team['team']['displayName']
-                wins = team['stats'][0]['value']
+                wins = team['stats'][10]['value']  # Actual total wins field
                 losses = team['stats'][1]['value']
                 points = team['stats'][3]['value']
                 streak = team['stats'][8]['displayValue']
