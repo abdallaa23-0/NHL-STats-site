@@ -112,16 +112,28 @@ with tab1:
                     goals = summary.get("scoringPlays")
                     if goals:
                         for goal in goals:
-                            scorer = ""
+                            scorer_name = "Unknown"
+                            scorer_id = ""
                             assists = []
                             for player in goal.get("players", []):
+                                athlete = player.get("athlete", {})
                                 if player.get("playerType") == "Scorer":
-                                    scorer = player.get("athlete", {}).get("displayName", "")
+                                    scorer_name = athlete.get("displayName", "")
+                                    scorer_id = athlete.get("id", "")
                                 elif player.get("playerType") == "Assist":
-                                    assists.append(player.get("athlete", {}).get("displayName", ""))
+                                    assist_name = athlete.get("displayName", "")
+                                    assists.append(assist_name)
+
                             time = goal.get("clock", "")
                             per = goal.get("period", "")
-                            desc = f"{scorer} scored in Period {per} at {time}"
+
+                            if scorer_id:
+                                scorer_link = f"https://www.espn.com/nhl/player/_/id/{scorer_id}"
+                                scorer_display = f"[{scorer_name}]({scorer_link})"
+                            else:
+                                scorer_display = scorer_name
+
+                            desc = f"{scorer_display} scored in Period {per} at {time}"
                             if assists:
                                 desc += f" (Assists: {', '.join(assists)})"
                             st.markdown(f"- {desc}")
