@@ -4,58 +4,30 @@ from datetime import datetime
 import pandas as pd
 
 st.set_page_config(page_title="NHL Scores Viewer", layout="centered")
-st.title("NHL Dashboard - Powered by SportsData.io")
+st.title("NHL Dashboard - Live from ESPN")
 
-API_KEY = "YOUR_SPORTSDATAIO_API_KEY"  # Replace with your actual SportsData.io API key
-HEADERS = {"Ocp-Apim-Subscription-Key": API_KEY}
-
-# --- Helper: Get Today's Games ---
+# --- Helper: Get Today's Games from ESPN ---
 def get_today_games():
-    today = datetime.today().strftime('%Y-%m-%d')
-    url = f"https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate/{today}"
+    url = "https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard"
     try:
-        response = requests.get(url, headers=HEADERS)
+        response = requests.get(url)
         response.raise_for_status()
-        return response.json()
+        return response.json().get("events", [])
     except:
         return []
 
-# --- Helper: Get All Players ---
-def get_player(name):
-    url = "https://api.sportsdata.io/v3/nhl/scores/json/Players"
-    try:
-        response = requests.get(url, headers=HEADERS)
-        response.raise_for_status()
-        players = response.json()
-        for player in players:
-            if name.lower() in player["Name"].lower():
-                return player
-        return None
-    except:
-        return None
-
-# --- Helper: Get Player Stats ---
-def get_player_stats(player_id):
-    url = f"https://api.sportsdata.io/v3/nhl/stats/json/PlayerSeasonStatsByPlayer/2024/{player_id}"
-    try:
-        response = requests.get(url, headers=HEADERS)
-        response.raise_for_status()
-        return response.json()
-    except:
-        return None
-
-# --- Helper: Get Standings ---
+# --- Helper: Get Standings from ESPN ---
 def get_standings():
-    url = "https://api.sportsdata.io/v3/nhl/scores/json/Standings/2024"
+    url = "https://site.web.api.espn.com/apis/v2/sports/hockey/nhl/standings"
     try:
-        response = requests.get(url, headers=HEADERS)
+        response = requests.get(url)
         response.raise_for_status()
-        return response.json()
+        return response.json().get("children", [])
     except:
         return []
 
 # --- Navigation Tabs ---
-tab1, tab2, tab3 = st.tabs(["📅 Today's Games", "👤 Player Stats", "🏆 Standings"])
+tab1, tab2 = st.tabs(["📅 Today's Games", "🏆 Standings"])
 
 # --- Tab 1: Today's Games ---
 with tab1:
@@ -64,61 +36,55 @@ with tab1:
         st.info("No NHL Games Today")
     else:
         for game in games:
-            home = game['HomeTeam']
-            away = game['AwayTeam']
-            home_score = game.get('HomeTeamScore', '-')
-            away_score = game.get('AwayTeamScore', '-')
-            status = game.get('Status', 'Scheduled')
-            st.subheader(f"{away} vs {home}")
-            st.write(f"**{away}:** {away_score} | **{home}:** {home_score}")
+            teams = game['competitions'][0]['competitors']
+            status = game['status']['type']['description']
+
+            home = next(t for t in teams if t['homeAway'] == 'home')
+            away = next(t for t in teams if t['homeAway'] == 'away')
+
+            home_name = home['team']['displayName']
+            away_name = away['team']['displayName']
+            home_score = home['score']
+            away_score = away['score']
+            home_logo = home['team']['logo']
+            away_logo = away['team']['logo']
+
+            cols = st.columns([1, 6, 1])
+            cols[0].image(away_logo, width=60)
+            cols[1].subheader(f"{away_name} vs {home_name}")
+            cols[2].image(home_logo, width=60)
+
+            st.write(f"**{away_name}:** {away_score} | **{home_name}:** {home_score}")
             st.caption(f"📍 {status}")
             st.markdown("---")
 
-# --- Tab 2: Player Stats ---
+# --- Tab 2: Standings ---
 with tab2:
-    player_name = st.text_input("Enter player name:", placeholder="Connor McDavid")
-    if player_name:
-        player = get_player(player_name)
-        if not player:
-            st.error("Player not found.")
-        else:
-            stats = get_player_stats(player["PlayerID"])
-            if not stats:
-                st.warning("No stats available.")
-            else:
-                st.subheader(f"Stats for {player['Name']}")
-                if player.get("PhotoUrl"):
-                    st.image(player["PhotoUrl"], width=100)
-                cols = st.columns(2)
-                for i, (key, value) in enumerate(stats.items()):
-                    cols[i % 2].markdown(f"**{key.replace('_', ' ').title()}:** {value}")
-
-# --- Tab 3: Standings ---
-with tab3:
-    standings = get_standings()
-    if not standings:
+    standings_data = get_standings()
+    if not standings_data:
         st.warning("Could not load standings.")
     else:
-        st.subheader("🏒 NHL Standings Table")
-        df = pd.DataFrame([
-            {
-                "Team": team["Name"],
-                "Wins": team["Wins"],
-                "Losses": team["Losses"],
-                "OT Losses": team["OvertimeLosses"],
-                "Points": team["Points"],
-                "Streak": team["Streak"]
-            } for team in standings
-        ])
-        st.dataframe(df.style.set_properties(**{
-            'text-align': 'left',
-            'background-color': '#f9f9f9',
-            'border-color': '#ddd',
-            'border-style': 'solid',
-            'border-width': '1px'
-        }).set_table_styles([
-            {"selector": "th", "props": [
-                ("font-weight", "bold"),
-                ("background-color", "#f0f2f6")
-            ]}
-        ]), use_container_width=True)
+        for conference in standings_data:
+            st.header(conference['name'])
+            rows = []
+            for team in conference['standings']['entries']:
+                team_name = team['team']['displayName']
+                wins = team['stats'][0]['value']
+                losses = team['stats'][1]['value']
+                points = team['stats'][3]['value']
+                streak = team['stats'][8]['displayValue']
+                rows.append([team_name, wins, losses, points, streak])
+
+            df = pd.DataFrame(rows, columns=["Team", "Wins", "Losses", "Points", "Streak"])
+            st.dataframe(df.style.set_properties(**{
+                'text-align': 'left',
+                'background-color': '#f9f9f9',
+                'border-color': '#ddd',
+                'border-style': 'solid',
+                'border-width': '1px'
+            }).set_table_styles([
+                {"selector": "th", "props": [
+                    ("font-weight", "bold"),
+                    ("background-color", "#f0f2f6")
+                ]}
+            ]), use_container_width=True)
