@@ -94,11 +94,13 @@ with tab1:
                         st.markdown(f"- {desc}")
 
                     st.subheader("Play-by-Play")
-                    all_plays = summary.get("plays", {}).get("allPlays", [])
-                    for play in all_plays[-10:]:
-                        time = play.get("clock", {}).get("displayValue", "")
-                        text = play.get("text", "")
-                        st.markdown(f"- {time} | {text}")
+                    plays_data = summary.get("plays")
+                    if plays_data and "allPlays" in plays_data:
+                        all_plays = plays_data["allPlays"]
+                        for play in all_plays[-10:]:
+                            time = play.get("clock", {}).get("displayValue", "")
+                            text = play.get("text", "")
+                            st.markdown(f"- {time} | {text}")
 
             st.divider()
 
